@@ -51,6 +51,6 @@
   "font":
     {"font": "arialbd.ttf", "color": "rgb(0,0,0)", "size": "129","align" : "c"},
   "modifier":
-    "x if float(x) % 1 == 0 else x if float(x) > 1 else '½' if float(x) % 1 == .5 else '¼' if float(x) % 1 == .25 else '⅛' if float(x) % 1 == .125 else x"
+    "x if float(x) % 1 == 0 else x if float(x) > 1 else '½' if float(x) % 1 == .5 else '¼' if float(x) % 1 == .25 else '⅛' if float(x) % 1 == .125 or float(x) == .13 else x"
   }
  }

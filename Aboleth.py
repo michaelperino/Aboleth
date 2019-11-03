@@ -4,10 +4,9 @@ import pprint
 import os
 import json
 
-monsters = "5e-SRD-Monsters.json"
+monsters = ["5e-SRD-Monsters.json", "Great-DND5e-Monster-Spreadsheet.json", "Great-DND5e-Monster-Spreadsheet-Homebrew.json"]
 skilldoc = "5e-SRD-Ability-Scores.json"
 cardfile = "./images/cardlayout.json"
-
 
 def main():
     jsondatabase = {}
@@ -27,17 +26,37 @@ def main():
     for element in jsondatabase[skilldoc]:
         skills[0].append(element["full_name"])
         skills[1].append(element["name"])
+    print('Monster list?')
+    count = 0
+    for element in monsters:
+        print(str(count) + ': ' + element)
+        count += 1
+    chosenlist = '-1'
+    while chosenlist.isnumeric() == False or int(chosenlist) not in range(0, len(monsters)):
+        chosenlist = input()
+    print('Type "back" to choose a different monster list')
+    monsterList = monsters[int(chosenlist)]
     while True:
         stype = input()
+        if stype == "back":
+            break
         query = input()
+        if query == "back":
+            break
         if stype == "stats" or stype == "stat":
-            for element in jsondatabase[monsters]:
+            found = False
+            for element in jsondatabase[monsterList]:
                 if element["name"] == query:
                     # pprint.pprint(element, indent=2)
                     card = Image.open('./images/basecard.png')
                     cardplt = ImageDraw.Draw(card)
                     carddraw(cardplt, cardlayout, element, skills)
                     card.save('./images/updated.png')
+                    found = True
+                    print('Done')
+            if not found:
+                print("Didn't see it, did you mean...")
+    main()
 
 
 def carddraw(image, cardlayout, monsterdata, skills):
@@ -49,11 +68,10 @@ def carddraw(image, cardlayout, monsterdata, skills):
         al = element["font"]["align"]
         font = ImageFont.truetype(font, size=int(size))
         count = 0
-        print(monsterdata)
         for elementint in element["elements"]:
-            print(elementint)
             x = monsterdata[elementint["name"].lower()]
-            print(x)
+            if x == 'TEMP':
+                break
             if "modifier" in element:
                 x = str(eval(element["modifier"])).split('Â')[-1]
             (xp, y, xs, ys) = (elementint['x'], elementint['y'], elementint['xs'], elementint['ys'])
