@@ -1,29 +1,41 @@
 {
-"MODfont":
-  {"font": "arial.ttf", "color": "rgb(0,0,0)", "size": "125"},
 "MOD": 
-  [{"name": "Strength", "x": 368, "y": 652, "xs": 284, "ys": 223}, 
-  {"name": "Dexterity", "x": 656, "y": 652, "xs": 284, "ys": 223},
-  {"name": "Constitution", "x": 944, "y": 652, "xs": 284, "ys": 223},
-  {"name": "Intelligence", "x": 1232, "y": 652, "xs": 284, "ys": 223},
-  {"name": "Wisdom", "x": 1520, "y": 652, "xs": 284, "ys": 223},
-  {"name": "Charisma", "x": 1808, "y": 652, "xs": 284, "ys": 223}],
-"RAWSCOREfont":
-  {"font": "arial.ttf", "color": "rgb(0,0,0)", "size": "75"},
+  {
+  "font" : {"font" : "arial.ttf", "color": "rgb(0,0,0)", "size": "125","align" : "c"},
+  "elements":
+    [{"name": "Strength", "x": 368, "y": 652, "xs": 284, "ys": 223}, 
+    {"name": "Dexterity", "x": 656, "y": 652, "xs": 284, "ys": 223},
+    {"name": "Constitution", "x": 944, "y": 652, "xs": 284, "ys": 223},
+    {"name": "Intelligence", "x": 1232, "y": 652, "xs": 284, "ys": 223},
+    {"name": "Wisdom", "x": 1520, "y": 652, "xs": 284, "ys": 223},
+    {"name": "Charisma", "x": 1808, "y": 652, "xs": 284, "ys": 223}],
+  "modifier":
+    "\"{0:+.0f}\".format((int(x)-10)/2 - ((int(x)-10)/2)%1)"
+  },
 "RAWSCORE":
-  [{"name": "Strength", "x": 416, "y": 856, "xs": 188, "ys": 152}, 
-  {"name": "Dexterity", "x": 704, "y": 856, "xs": 188, "ys": 152},
-  {"name": "Constitution", "x": 992, "y": 856, "xs": 188, "ys": 152},
-  {"name": "Intelligence", "x": 1280, "y": 856, "xs": 188, "ys": 152},
-  {"name": "Wisdom", "x": 1568, "y": 856, "xs": 188, "ys": 152},
-  {"name": "Charisma", "x": 1856, "y": 856, "xs": 188, "ys": 152}],
+  {
+  "font" : {"font": "arial.ttf", "color": "rgb(0,0,0)", "size": "75","align" : "c"},
+  "elements":
+    [{"name": "Strength", "x": 416, "y": 856, "xs": 188, "ys": 152}, 
+    {"name": "Dexterity", "x": 704, "y": 856, "xs": 188, "ys": 152},
+    {"name": "Constitution", "x": 992, "y": 856, "xs": 188, "ys": 152},
+    {"name": "Intelligence", "x": 1280, "y": 856, "xs": 188, "ys": 152},
+    {"name": "Wisdom", "x": 1568, "y": 856, "xs": 188, "ys": 152},
+    {"name": "Charisma", "x": 1856, "y": 856, "xs": 188, "ys": 152}]
+  },
 "MONSTNAME":
-  {"x": 219, "y": 44, "xs": 1232, "ys": 154},
-"MONSTNAMEfont":
-  {"font": "arialbd.ttf", "color": "rgb(140,17,0)", "size": "98"},
+  {
+  "elements":
+    [{"name":"name","x": 219, "y": 44, "xs": 1232, "ys": 154}],
+  "font" : {"font": "arialbd.ttf", "color": "rgb(140,17,0)", "size": "98","align" : "l"}
+  },
 "COMBATRATING":
-  {"x": 12, "y": 16, "xs": 184, "ys": 198},
-"COMBATRATINGfont":
-  {"font": "arialbd.ttf", "color": "rgb(0,0,0)", "size": "129"}
-
+  {
+  "elements":
+    [{"name":"challenge_rating","x": 12, "y": 16, "xs": 184, "ys": 198}],
+  "font":
+    {"font": "arialbd.ttf", "color": "rgb(0,0,0)", "size": "129","align" : "c"},
+  "modifier":
+    "x if float(x) % 1 == 0 else x if float(x) > 1 else '½' if float(x) % 1 == .5 else '¼' if float(x) % 1 == .25 else '⅛' if float(x) % 1 == .125 else x"
+  }
  }

@@ -36,13 +36,32 @@ def main():
                     #pprint.pprint(element, indent=2)
                     card = Image.open('./images/basecard.png')
                     cardplt = ImageDraw.Draw(card)
-                    for skill in skills:
-                        print('%13s%5d'%(skill[1], (element[skill[0].lower()])))
-                        if cardlayout != None:
-                            skilldraw(cardplt,element[skill[0].lower()],skill,cardlayout)
-                    topfielddraw(cardplt,element,cardlayout)
+                    carddraw(cardplt,cardlayout,element)
                     card.save('./images/updated.png')
-def skilldraw(image,stat,statname,cardlayout):
+def carddraw(image, cardlayout, monsterdata):
+    for element in cardlayout:
+        element = cardlayout[element]
+        font = element["font"]["font"]
+        color = element["font"]["color"]
+        size = element["font"]["size"]
+        al = element["font"]["align"]
+        font = ImageFont.truetype(font,size=int(size))
+        for elementint in element["elements"]:
+            print(elementint)
+            x = monsterdata[elementint["name"].lower()]
+            if "modifier" in element:
+                x = eval(element["modifier"])
+            (xp,y,xs,ys) = (elementint['x'],elementint['y'],elementint['xs'],elementint['ys'])
+            size = font.getsize(str(x))
+            if al == "c":
+                xp+=xs/2-size[0]/2
+            if al == "l":
+                xp=xp
+            if al == "r":
+                xp+=-xs/2+size[0]/2
+            image.text((xp,y+ys/2-size[1]/2),str(x),fill=color,font=font)
+                
+def statdraw(image,stat,statname,cardlayout):
     colorMod = cardlayout["MODfont"]["color"]
     colorRawScore = cardlayout["RAWSCOREfont"]["color"]
     fontMod = ImageFont.truetype(cardlayout["MODfont"]["font"],size=int(cardlayout["MODfont"]["size"]))
