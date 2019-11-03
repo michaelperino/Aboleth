@@ -9,8 +9,9 @@ monsters = ["5e-SRD-Monsters.json", "Great-DND5e-Monster-Spreadsheet.json", "Gre
 skilldoc = "5e-SRD-Ability-Scores.json"
 cardfile = "./images/cardlayout.json"
 
+jsondatabase = {}
+
 def main():
-    jsondatabase = {}
     path = '../open5e/'
     for file in os.listdir(path):
         if file.endswith(".json"):
@@ -51,14 +52,14 @@ def main():
         if stype == "stats" or stype == "stat":
             found = False
             for element in jsondatabase[monsterList]:
-                if element["name"] == query:
+                if element["name"].lower() == query:
                     # pprint.pprint(element, indent=2)
+                    print('Done. Your ' + element['name'] + ' card is ready, here are the raw stats anyway.')
                     card = Image.open('./images/basecard.png')
                     cardplt = ImageDraw.Draw(card)
                     carddraw(cardplt, cardlayout, element, skills)
                     card.save('./images/updated.png')
                     found = True
-                    print('Done. Your '+element['name']+' card is ready, here are the raw stats anyway.')
                     for i in range(0,len(skills[0])):
                         print(skills[1][i] + ' ' + str(element[str(skills[0][i]).lower()]))
             if not found:

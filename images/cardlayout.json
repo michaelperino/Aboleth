@@ -52,5 +52,22 @@
     {"font": "arialbd.ttf", "color": "rgb(0,0,0)", "size": "129","align" : "c"},
   "modifier":
     "x if float(x) % 1 == 0 else x if float(x) > 1 else '½' if float(x) % 1 == .5 else '¼' if float(x) % 1 == .25 else '⅛' if float(x) % 1 == .125 or float(x) == .13 else x"
+  },
+  "ARMORCLASS":
+  {
+    "font":
+      {"font": "arial.ttf", "color": "rgb(0,0,0)", "size": "145","align" : "c"},
+    "elements":
+    [{"name":"armor_class","x": 40, "y": 415, "xs": 209, "ys": 112}]
+  },
+  "EXPERIENCE":
+  {
+     "font":
+      {"font": "arial.ttf", "color": "rgb(0,0,0)", "size": "64","align" : "c"},
+    "elements":
+            [{"name": "challenge_rating","x": 12,"y": 262, "xs": 384, "ys": 60}],
+    "modifier":
+            "'('+jsondatabase['Challenge-Rating.json'][str(x)]+' XP)'"
   }
+
  }
