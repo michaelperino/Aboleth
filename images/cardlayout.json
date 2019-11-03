@@ -28,16 +28,16 @@
   "font" : {"font": "arialbd.ttf", "color": "rgb(140,17,0)", "size": "44","align" : "c"},
   "elements":
     [
-    {"name":"WEL","x":376,"y":664,"xs":268,"ys":32},
-    {"name":"YOU","x":664,"y":664,"xs":268,"ys":32},
-    {"name":"NOT","x":952,"y":664,"xs":268,"ys":32},
-    {"name":"MEANT","x":1240,"y":664,"xs":268,"ys":32},
-    {"name":"2SEE","x":1528,"y":664,"xs":268,"ys":32},
-    {"name":"THESE","x":1816,"y":664,"xs":268,"ys":32}
+    {"name":"Strength","x":376,"y":664,"xs":268,"ys":32},
+    {"name":"Dexterity","x":664,"y":664,"xs":268,"ys":32},
+    {"name":"Constitution","x":952,"y":664,"xs":268,"ys":32},
+    {"name":"Intelligence","x":1240,"y":664,"xs":268,"ys":32},
+    {"name":"Wisdom","x":1528,"y":664,"xs":268,"ys":32},
+    {"name":"Charisma","x":1816,"y":664,"xs":268,"ys":32}
     ],
   "modifier":
-    "skilldoc.keys()[count][\"name\"].upper()"
-  }
+    "skills[1][skills[0].index(elementint['name'].title())]"
+  },
 "MONSTNAME":
   {
   "elements":
