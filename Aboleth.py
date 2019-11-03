@@ -3,6 +3,7 @@ from PIL import ImageFont, Image, ImageDraw
 import pprint
 import os
 import json
+from Spellcheck import spellcheck
 
 monsters = ["5e-SRD-Monsters.json", "Great-DND5e-Monster-Spreadsheet.json", "Great-DND5e-Monster-Spreadsheet-Homebrew.json"]
 skilldoc = "5e-SRD-Ability-Scores.json"
@@ -36,13 +37,17 @@ def main():
         chosenlist = input()
     print('Type "back" to choose a different monster list')
     monsterList = monsters[int(chosenlist)]
+    inputneeded = True
     while True:
-        stype = input()
-        if stype == "back":
-            break
-        query = input()
-        if query == "back":
-            break
+        if inputneeded:
+            stype = input()
+            if stype == "back":
+                break
+            query = input()
+            if query == "back":
+                break
+        else:
+            inputneeded = True
         if stype == "stats" or stype == "stat":
             found = False
             for element in jsondatabase[monsterList]:
@@ -53,9 +58,16 @@ def main():
                     carddraw(cardplt, cardlayout, element, skills)
                     card.save('./images/updated.png')
                     found = True
-                    print('Done')
+                    print('Done. Your '+element['name']+' card is ready, here are the raw stats anyway.')
+                    for i in range(0,len(skills[0])):
+                        print(skills[1][i] + ' ' + str(element[str(skills[0][i]).lower()]))
             if not found:
                 print("Didn't see it, did you mean...")
+                intended = spellcheck(query, path, monsterList)
+                if intended is not None:
+                    query = intended
+                    inputneeded = False
+
     main()
 
 
