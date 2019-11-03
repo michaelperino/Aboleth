@@ -46,11 +46,12 @@ def carddraw(image, cardlayout, monsterdata):
         size = element["font"]["size"]
         al = element["font"]["align"]
         font = ImageFont.truetype(font,size=int(size))
+        count = 0
         for elementint in element["elements"]:
             print(elementint)
             x = monsterdata[elementint["name"].lower()]
             if "modifier" in element:
-                x = eval(element["modifier"])
+                x = str(eval(element["modifier"])).split('Â')[-1]
             (xp,y,xs,ys) = (elementint['x'],elementint['y'],elementint['xs'],elementint['ys'])
             size = font.getsize(str(x))
             if al == "c":
@@ -60,6 +61,7 @@ def carddraw(image, cardlayout, monsterdata):
             if al == "r":
                 xp+=-xs/2+size[0]/2
             image.text((xp,y+ys/2-size[1]/2),str(x),fill=color,font=font)
+            count += 1
                 
 def statdraw(image,stat,statname,cardlayout):
     colorMod = cardlayout["MODfont"]["color"]
