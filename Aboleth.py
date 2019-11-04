@@ -52,7 +52,7 @@ def main():
         if stype == "stats" or stype == "stat":
             found = False
             for element in jsondatabase[monsterList]:
-                if element["name"].lower() == query:
+                if element["name"].lower() == query.lower():
                     # pprint.pprint(element, indent=2)
                     print('Done. Your ' + element['name'] + ' card is ready, here are the raw stats anyway.')
                     card = Image.open('./images/basecard.png')
@@ -66,6 +66,7 @@ def main():
                 print("Didn't see it, did you mean...")
                 intended = spellcheck(query, path, monsterList)
                 if intended is not None:
+                    stype = "stat"
                     query = intended
                     inputneeded = False
 

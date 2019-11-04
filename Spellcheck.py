@@ -8,8 +8,7 @@ def spellcheck(mystery_word, path, expected_loc):
     possibilities = []
     namepath = "./namelist.json"
     if not os.path.exists(path + namepath):
-        #namegen()
-        print("namegen disabled")
+        namegen()
     with open(namepath, 'r') as f:
         filedict = json.load(f)
     for element in filedict[expected_loc]:
@@ -34,6 +33,7 @@ def spellcheck(mystery_word, path, expected_loc):
     print('If none of these are intended options, just press enter')
     choice = input()
     if choice.isnumeric():
+        print(' '.join(possibilities[int(choice)]))
         return ' '.join(possibilities[int(choice)])
     else:
         return None
