@@ -36,7 +36,7 @@
     {"name":"Charisma","x":1816,"y":664,"xs":268,"ys":32}
     ],
   "modifier":
-    "skills[1][skills[0].index(elementint['name'].title())]"
+    "attributes[1][attributes[0].index(elementint['name'].title())]"
   },
 "MONSTNAME":
   {
@@ -67,7 +67,7 @@
     "elements":
             [{"name": "challenge_rating","x": 12,"y": 262, "xs": 384, "ys": 60}],
     "modifier":
-            "'('+jsondatabase['Challenge-Rating.json'][str(x)]+' XP)'"
+            "'('+jsondatabase['Challenge-Rating.json'][0][str(x)]+' XP)'"
   }
 
  }

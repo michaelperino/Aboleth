@@ -5,29 +5,33 @@ import os
 import json
 from Spellcheck import spellcheck
 
-monsters = ["5e-SRD-Monsters.json", "Great-DND5e-Monster-Spreadsheet.json", "Great-DND5e-Monster-Spreadsheet-Homebrew.json"]
+monsters = ["5e-SRD-Monsters.json", "Great-DND5e-Monster-Spreadsheet.json",
+            "Great-DND5e-Monster-Spreadsheet-Homebrew.json", "players.json", "custom_monsters.json"]
 skilldoc = "5e-SRD-Ability-Scores.json"
 cardfile = "./images/cardlayout.json"
+path = '../open5e/'
 
 jsondatabase = {}
+attributes = [[], []]
+cardlayout = None
+if os.path.exists(cardfile):
+    with open(cardfile, 'r') as f:
+        cardlayout = json.load(f)
+else:
+    print('ERROR: No card layout detected. Unable to create stat cards.')
+
 
 def main():
     path = '../open5e/'
     for file in os.listdir(path):
         if file.endswith(".json"):
             with open(path + file, 'r') as f:
+                print(file)
                 jsondatabase[file] = json.load(f)
     elementas = jsondatabase.keys()
-    skills = [[], []]
-    cardlayout = None
-    if os.path.exists(cardfile):
-        with open(cardfile, 'r') as f:
-            cardlayout = json.load(f)
-    else:
-        print('ERROR: No card layout detected. Unable to create stat cards.')
     for element in jsondatabase[skilldoc]:
-        skills[0].append(element["full_name"])
-        skills[1].append(element["name"])
+        attributes[0].append(element["full_name"])
+        attributes[1].append(element["name"])
     print('Monster list?')
     count = 0
     for element in monsters:
@@ -38,42 +42,90 @@ def main():
         chosenlist = input()
     print('Type "back" to choose a different monster list')
     monsterList = monsters[int(chosenlist)]
-    inputneeded = True
     while True:
-        if inputneeded:
-            stype = input()
-            if stype == "back":
-                break
-            query = input()
-            if query == "back":
-                break
+        stype = input().lower()
+        if stype == "back":
+            break
         else:
             inputneeded = True
         if stype == "stats" or stype == "stat":
-            found = False
-            for element in jsondatabase[monsterList]:
-                if element["name"].lower() == query.lower():
-                    # pprint.pprint(element, indent=2)
-                    print('Done. Your ' + element['name'] + ' card is ready, here are the raw stats anyway.')
-                    card = Image.open('./images/basecard.png')
-                    cardplt = ImageDraw.Draw(card)
-                    carddraw(cardplt, cardlayout, element, skills)
-                    card.save('./images/updated.png')
-                    found = True
-                    for i in range(0,len(skills[0])):
-                        print(skills[1][i] + ' ' + str(element[str(skills[0][i]).lower()]))
-            if not found:
-                print("Didn't see it, did you mean...")
-                intended = spellcheck(query, path, monsterList)
-                if intended is not None:
-                    stype = "stat"
-                    query = intended
-                    inputneeded = False
-
+            monstAttribs = stats("", monsterList, True)
+            if monstAttribs is not None:
+                for i in range(0, len(monstAttribs[1])):
+                    print(str(attributes[1][i]) + '  ' + '{0:+}'.format(int(monstAttribs[2][i])) + '\t\t' + str(
+                        monstAttribs[1][i]))
+        if stype == "enounter":
+            runencounter()
+        if stype == "addplayer":
+            addplayer()
     main()
 
 
-def carddraw(image, cardlayout, monsterdata, skills):
+def addplayer():
+    newplayer = {}
+    print("Player name?")
+    newplayer["name"] = input()
+
+def runencounter():
+    print('New encounter or loaded? ("new" or "load")')
+    doload = input().lower()
+    if doload in "new":
+        print('Encounter name?')
+        encname = input()
+        if os.path.exists("./encounters/"+str(encname)+'.json'):
+            print("ERROR: FILE EXISTS")
+            return None
+        with open("./encounters/"+str(encname)+'.json',"w+") as f:
+            print("Enter combatants (empty line signals completion)")
+            while True:
+                combatant_name = input()
+                print("Combatant source?")
+                count = 0
+                for element in monsters:
+                    print(str(count) + " : " + element)
+                choice = input()
+                if choice.isnumeric() and int(choice) < len(monsters):
+                    monstAttribs = stats(combatant_name, monsters[choice], False)
+                    if monstAttribs is not None:
+                        for i in range(0, len(monstAttribs[1])):
+                            print(str(attributes[1][i]) + '  ' + '{0:+}'.format(int(monstAttribs[2][i])) + '\t\t' + str(
+                                monstAttribs[1][i]))
+
+
+def stats(query, monsterList, inputneeded):
+    found = False
+    if inputneeded:
+        query = input().lower()
+    else:
+        query = query.lower()
+    monstAttribs = [[], [], []]
+    if query == "back":
+        monstAttribs[0].append("back")
+        return monstAttribs
+    for element in jsondatabase[monsterList]:
+        if element["name"].lower() == query:
+            # pprint.pprint(element, indent=2)
+            print('Done. Your ' + element['name'] + ' card is ready, here are the raw stats anyway.')
+            card = Image.open('./images/basecard.png')
+            cardplt = ImageDraw.Draw(card)
+            carddraw(cardplt, cardlayout, element)
+            card.save('./images/updated.png')
+            found = True
+
+            for attrib in attributes[0]:
+                monstAttribs[0].append(attrib)
+                monstAttribs[1].append(element[attrib.lower()])
+                monstAttribs[2].append((element[attrib.lower()] - element[attrib.lower()] % 2 - 10) / 2)
+            return monstAttribs
+    if not found:
+        print("Didn't see it, did you mean...")
+        intended = spellcheck(query, path, monsterList)
+        if intended is not None:
+            query = intended
+            return stats(query, monsterList, False)
+
+
+def carddraw(image, cardlayout, monsterdata):
     for element in cardlayout:
         element = cardlayout[element]
         font = element["font"]["font"]

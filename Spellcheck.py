@@ -32,8 +32,8 @@ def spellcheck(mystery_word, path, expected_loc):
         count += 1
     print('If none of these are intended options, just press enter')
     choice = input()
-    if choice.isnumeric():
-        print(' '.join(possibilities[int(choice)]))
-        return ' '.join(possibilities[int(choice)])
+    if choice.isnumeric() and int(choice) < len(possibilities):
+        print(' '.join(possibilities[abs(int(choice))]))
+        return ' '.join(possibilities[abs(int(choice))])
     else:
         return None
