@@ -7,7 +7,7 @@ def spellcheck(mystery_word, path, expected_loc):
     locdict = [[]]
     possibilities = []
     namepath = "./namelist.json"
-    if not os.path.exists(path + namepath):
+    if not os.path.exists(namepath):
         namegen()
     with open(namepath, 'r') as f:
         filedict = json.load(f)
