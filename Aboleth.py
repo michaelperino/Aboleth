@@ -107,6 +107,33 @@ def addplayer():
             else:
                 indentedel = 0
                 indent -= 1
+    print('How many actions to add?')
+    actions = validintinput(0, 200)
+    if actions > 0:
+        newplayer["actions"] = []
+    validkeys = {'attack_bonus': 0, 'desc': 0, 'name': 0}
+    validkeys['damage'] = ['damage_bonus', 'damage_dice', 'damage_type']
+    validkeys['dc'] = ['dc_type', 'dc_value', 'success_type']
+    for i in range(0, actions):
+        newplayer['actions'].append({})
+        while True:
+            print('Continue giving one of the following keys until satisfied. Enter empty line to go to next action.')
+            print(validkeys.keys())
+            level1 = input()
+            if level1 == '':
+                break
+            if validkeys.get(level1) is not None and validkeys[level1] != 0:
+                print('Second level key: ', validkeys[level1])
+                level2 = input()
+                if level2 in validkeys[level1]:
+                    print('Value?')
+                    value = input()
+                    newplayer['actions'][-1].setdefault(level1, {})
+                    newplayer['actions'][-1][level1][level2] = value
+            elif validkeys.get(level1) is not None:
+                print('Value?')
+                value = input()
+                newplayer['actions'][-1][level1] = value
     newplayer["challenge_rating"] = newplayer["level"]
     with open(path + 'players.json', "r") as f:
         playerscurr = json.load(f)
@@ -166,6 +193,33 @@ def addmonster():
             else:
                 indentedel = 0
                 indent -= 1
+    print('How many actions to add?')
+    actions = validintinput(0,200)
+    if actions > 0:
+        newplayer["actions"] = []
+    validkeys = {'attack_bonus' : 0, 'desc' : 0, 'name' : 0}
+    validkeys['damage'] = ['damage_bonus', 'damage_dice', 'damage_type']
+    validkeys['dc'] = ['dc_type', 'dc_value', 'success_type']
+    for i in range(0, actions):
+        newplayer['actions'].append({})
+        while True:
+            print('Continue giving one of the following keys until satisfied. Enter empty line to go to next action.')
+            print(validkeys.keys())
+            level1 = input()
+            if level1 == '':
+                break
+            if validkeys.get(level1) is not None and validkeys[level1] != 0:
+                print('Second level key: ', validkeys[level1])
+                level2 = input()
+                if level2 in validkeys[level1]:
+                    print('Value?')
+                    value = input()
+                    newplayer['actions'][-1].setdefault(level1,{})
+                    newplayer['actions'][-1][level1][level2] = value
+            elif validkeys.get(level1) is not None:
+                print('Value?')
+                value = input()
+                newplayer['actions'][-1][level1] = value
     with open(path + 'custom_monsters.json', "r") as f:
         playerscurr = json.load(f)
         playerscurr.append(newplayer)
@@ -262,10 +316,10 @@ def runencounter():
         print("TURN TO " + str(encounter['initiative list'][1][encounter['initiativecount']]))
         turnid = encounter['rounds'][-1].setdefault('turn_id', 0)
         while True:
-            print('Options: stats, changehp (gives ac), sethp, addnote, nextturn, save')
+            print('Options: stats, changehp (gives ac), sethp, actions, addnote, nextturn, save')
             option = input()
             count = 0
-            if option in ['stats', 'changehp', 'sethp', 'addnote']:
+            if option in ['stats', 'changehp', 'sethp', 'addnote', 'actions']:
                 for element in encounter["combatants"]:
                     print(str(count) + ' : ' + element['name'])
                     count += 1
@@ -319,6 +373,9 @@ def runencounter():
                 print('Save successful.')
                 if finalturn:
                     break
+            elif option in 'actions':
+                if creature['fullblock'].get('actions') is not None:
+                    pprint.pprint(creature['fullblock'].get('actions'), indent=4)
             encounter['rounds'].append(turn)
             turnid += 1
             if sincesave > 9:
