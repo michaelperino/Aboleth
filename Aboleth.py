@@ -26,7 +26,6 @@ def main():
     for file in os.listdir(path):
         if file.endswith(".json"):
             with open(path + file, 'r') as f:
-                print(file)
                 jsondatabase[file] = json.load(f)
     elementas = jsondatabase.keys()
     for element in jsondatabase[skilldoc]:
@@ -63,8 +62,58 @@ def main():
 
 def addplayer():
     newplayer = {}
-    print("Player name?")
-    newplayer["name"] = input()
+    print("Please provide the following values (if multiple ex proficiencies/languages, separate with commas)")
+    queries = ["name", "size", "alignment", "armor_class", "hit_points", "hit_dice", "speed{", "walk", "swim", "fly",
+               "climb", "}", "strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma", "skills",
+               "senses", "languages", "level"]
+    indent = 0
+    indentedel = 0
+    for element in queries:
+        print(element)
+        if indent == 0:
+            if '{' not in element:
+                stat = input()
+                if stat.isnumeric() and float(stat) % 1 < .0001:
+                    newplayer[element] = int(stat)
+                elif isinstance(stat, str) and stat.count(',') > 0:
+                    stat = stat.split(',')
+                    replacement = []
+                    for fix in stat:
+                        replacement.append(fix.strip().title())
+                    stat = replacement
+                    newplayer[element] = stat
+                else:
+                    newplayer[element] = stat
+            else:
+                newplayer[element.split("{")[0]] = {}
+                indent += 1
+                indentedel = newplayer[element[0:-1]]
+        else:
+            if '}' not in element:
+                stat = input()
+                if stat.isnumeric() and float(stat) % 1 < .0001:
+                    indentedel[element] = int(stat)
+                if isinstance(stat, str) and stat.count(',') > 0:
+                    stat = stat.split(',')
+                    replacement = []
+                    for fix in stat:
+                        replacement.append(fix.strip().title())
+                    stat = element
+                    indentedel[element] = stat
+                else:
+                    indentedel[element] = stat
+            else:
+                indentedel = 0
+                indent -= 1
+    newplayer["challenge_rating"] = newplayer["level"]
+    with open(path+'players.json', "r") as f:
+        playerscurr = json.load(f)
+        playerscurr.append(newplayer)
+    json.dumps(playerscurr)
+    with open(path+'players.json', "w") as f:
+        json.dump(playerscurr, f, sort_keys=True, indent=4, separators=(',', ': '))
+    print("If you are in player list, back out and return before attempting to print cards or run encounters")
+
 
 def runencounter():
     print('New encounter or loaded? ("new" or "load")')
@@ -72,10 +121,10 @@ def runencounter():
     if doload in "new":
         print('Encounter name?')
         encname = input()
-        if os.path.exists("./encounters/"+str(encname)+'.json'):
+        if os.path.exists("./encounters/" + str(encname) + '.json'):
             print("ERROR: FILE EXISTS")
             return None
-        with open("./encounters/"+str(encname)+'.json',"w+") as f:
+        with open("./encounters/" + str(encname) + '.json', "w+") as f:
             print("Enter combatants (empty line signals completion)")
             while True:
                 combatant_name = input()
