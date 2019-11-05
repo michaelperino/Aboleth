@@ -28,7 +28,6 @@ def main():
         if file.endswith(".json"):
             with open(path + file, 'r') as f:
                 jsondatabase[file] = json.load(f)
-    elementas = jsondatabase.keys()
     if len(attributes[1]) < 3:
         for element in jsondatabase[skilldoc]:
             attributes[0].append(element["full_name"])
@@ -38,19 +37,18 @@ def main():
     for element in monsters:
         print(str(count) + ': ' + element)
         count += 1
-    chosenlist = '-1'
-    while chosenlist.isnumeric() == False or int(chosenlist) not in range(0, len(monsters)):
-        chosenlist = input()
+    chosenlist = validintinput(0, len(monsters)-1)
     print('Type "back" to choose a different monster list')
     monsterList = monsters[int(chosenlist)]
     while True:
+        print('Options:',['stats','encounter','addplayer','addmonster'])
         stype = input().lower()
         if stype == "back":
             break
         else:
             inputneeded = True
         if stype == "stats" or stype == "stat":
-            monstAttribs = stats("", monsterList, True)
+            monstAttribs, block = stats("", monsterList, True)
             if monstAttribs is not None:
                 for i in range(0, len(monstAttribs[1])):
                     print(str(attributes[1][i]) + '  ' + '{0:+}'.format(int(monstAttribs[2][i])) + '\t\t' + str(
@@ -200,10 +198,7 @@ def runencounter():
                 for element in monsters:
                     print(str(count) + " : " + element)
                     count += 1
-                choice = str(-1)
-                while not choice.isnumeric() or not (len(monsters) > int(choice) > -1):
-                    choice = input()
-                choice = int(choice)
+                choice = validintinput(0, len(monsters)-1)
                 combatant_species = spellcheck(combatant_species, path, monsters[choice])
                 if combatant_species is not None:
                     monstAttribs, block = stats(combatant_species, monsters[choice], False)
@@ -218,34 +213,37 @@ def runencounter():
                         combatants[-1]["stats"] = monstAttribs
                         combatants[-1]["fullblock"] = block
                         print("Hit points to start?")
-                        if 'hit_points' in monstAttribs:
-                            print('Base hit points of the species are ' + str(monstAttribs['hit_points']))
+                        if 'hit_points' in block:
+                            print('Base hit points of the species are ' + str(block['hit_points']))
                         combatants[-1]["hit_points"] = int(input())
                         combatants[-1]['notes'] = []
             encounter["combatants"] = combatants
             encounter["rounds"] = []
+            encounter['rounds'].append({})
             print("INITIATIVE TIME!")
             for element in encounter["combatants"]:
                 print(element["name"] + '   ' + element["species"])
-                element["initiative"] = int(input())
+                element["initiative"] = validintinput(-2000,2000)
             encounter["initiative list"] = [[], []]
             comba = encounter["combatants"]
             max = -500
             max_creature = ''
             for element in comba:
                 for element1 in comba:
-                    if element1["initiative"] > max:
+                    if element1["initiative"] > max and element1['name'] not in encounter['initiative list'][1]:
                         max = element1["initiative"]
                         max_creature = element1["name"]
                 encounter["initiative list"][0].append(max)
                 encounter["initiative list"][1].append(max_creature)
-                element1["initiative"] = -5000
+                max = -500
             json.dump(encounter, f, sort_keys=True, indent=4, separators=(',', ': '))
             f.flush()
             print('Encounter start saved!')
             doload = 'load'
     if doload in "load":
-        if encname is None:
+        try:
+            doload = encname
+        except UnboundLocalError:
             options = []
             for file in os.listdir('./encounters'):
                 options.append(file)
@@ -260,29 +258,40 @@ def runencounter():
             encounter = json.load(f)
         print('Turns will now begin to iterate until empty line input. To start combat enter "nextturn"')
         sincesave = 0
-        initiativecount = 0
-        turnid = 0
+        encounter.setdefault('initiativecount', 0)
+        print("TURN TO " + str(encounter['initiative list'][1][encounter['initiativecount']]))
+        turnid = encounter['rounds'][-1].setdefault('turn_id', 0)
         while True:
             print('Options: stats, changehp (gives ac), sethp, addnote, nextturn, save')
             option = input()
             count = 0
-            for element in encounter["combatants"]:
-                print(str(count) + ' : ' + element['name'])
-            if option in ['stats', 'changehp', 'sethp', 'addnode']:
-                creature = encounter["combatants"][int(input())]
-            turn = {id: turnid}
+            if option in ['stats', 'changehp', 'sethp', 'addnote']:
+                for element in encounter["combatants"]:
+                    print(str(count) + ' : ' + element['name'])
+                    count += 1
+                creature = encounter["combatants"][validintinput(0,count-1)]
+            turn = {'turn_id': turnid}
+            finalturn = False
             if option == '':
-                break
-            elif option in 'stats':
-                for i in range(0, len(monstAttribs[1])):
+                print('Would you like to save first?? [Y/N]')
+                option = input()
+                if option in 'Y':
+                    option = 'save'
+                    finalturn = True
+                elif option in 'N':
+                    break
+            if option in 'stats':
+                for i in range(0, len(creature['stats'][1])):
                     print(str(attributes[1][i]) + '  ' + '{0:+}'.format(int(creature['stats'][2][i])) + '\t\t' + str(
                         creature['stats'][1][i]))
                 print('AC : ' + str(creature["fullblock"]["armor_class"]))
+                print('Current HP : ' + str(creature['hit_points']))
                 turn['stat lookup'] = {'creature': creature['name']}
             elif option in 'changehp' or option in 'sethp':
                 print('AC : ' + str(creature["fullblock"]["armor_class"]))
+                print('Current HP : ' + str(creature['hit_points']))
                 print('Enter HP change')
-                hpchange = input()
+                hpchange = validintinput(-pow(2,16)+1,pow(2,16)-1)
                 turn['hp changed'] = {'creature': creature['name'], 'old_hp': creature['hit_points']}
                 if option in 'changehp':
                     creature['hit_points'] += int(hpchange)
@@ -290,19 +299,28 @@ def runencounter():
                     creature['hit_points'] = int(hpchange)
                 turn['hp changed']['new_hp'] = creature['hit_points']
             elif option in 'addnote':
-                creature['notes'].append(input())
+                note = input()
+                creature['notes'].append(note)
+                turn['notes'] = note
             elif option in 'nextturn':
                 turnid += 1
-                if initiativecount >= len(encounter['initiative list']):
-                    initiativecount = 0
-                print("TURN TO " + str(encounter['initiative list'][1][initiativecount]))
-                print(encounter[combatants][encounter['initiative list'][1][initiativecount]]['notes'])
-                initiativecount += 1
+                encounter['initiativecount'] += 1
+                if encounter['initiativecount'] >= len(encounter['initiative list'][0]):
+                    encounter['initiativecount'] = 0
+                print("TURN TO " + str(encounter['initiative list'][1][encounter['initiativecount']]))
+                for element in encounter['combatants']:
+                    if encounter['initiative list'][1][encounter['initiativecount']] == element['name']:
+                        print(element['notes'])
+                        break
             elif option in 'save':
                 with open("./encounters/" + str(encname) + '.json', "w+") as f:
                     json.dump(encounter, f, sort_keys=True, indent=4, separators=(',', ': '))
                 sincesave = 0
-
+                print('Save successful.')
+                if finalturn:
+                    break
+            encounter['rounds'].append(turn)
+            turnid += 1
             if sincesave > 9:
                 print("PLEASE SAVE: HAVE NOT SAVED IN " + str(sincesave))
 
@@ -310,6 +328,7 @@ def runencounter():
 def stats(query, monsterList, inputneeded):
     found = False
     if inputneeded:
+        print("Monster species?")
         query = input().lower()
     else:
         query = query.lower()
@@ -374,5 +393,13 @@ def isFloat(isit):
     except ValueError:
         return False
 
+
+def validintinput(min,max):
+    print('Give valid integer between ' + str(min) + ' and ' + str(max))
+    inp = input()
+    while not (isFloat(inp) and (max >= int(float(inp)) >= min)):
+        print('Give valid integer between ' + str(min) + ' and ' + str(max))
+        inp = input()
+    return int(float(inp))
 
 main()
