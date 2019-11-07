@@ -6,16 +6,17 @@ import json
 from Spellcheck import spellcheck
 from generate_name_dict import generate_name_dict
 
+# in the future, is there a better way to accomplish this? maybe a json file that labels what is what?
 monsters = ["5e-SRD-Monsters.json", "Great-DND5e-Monster-Spreadsheet.json",
             "Great-DND5e-Monster-Spreadsheet-Homebrew.json", "players.json", "custom_monsters.json"]
 skilldoc = "5e-SRD-Ability-Scores.json"
 cardfile = "./images/cardlayout.json"
 path = '../open5e/'
 
-jsondatabase = {}
-attributes = [[], []]
-cardlayout = None
-if os.path.exists(cardfile):
+jsondatabase = {} # stores all the json files to memory
+attributes = [[], []] # stores all the skill names and abbreviations to memory
+cardlayout = None # sets default cardlayout as None to avoid a try except loop
+if os.path.exists(cardfile): # gets json layout of the card
     with open(cardfile, 'r') as f:
         cardlayout = json.load(f)
 else:
@@ -23,12 +24,11 @@ else:
 
 
 def main():
-    path = '../open5e/'
-    for file in os.listdir(path):
+    for file in os.listdir(path):  # gets list of all the json files
         if file.endswith(".json"):
             with open(path + file, 'r') as f:
-                jsondatabase[file] = json.load(f)
-    if len(attributes[1]) < 3:
+                jsondatabase[file] = json.load(f)  # subsequently loads those json files to memory
+    if len(attributes[1]) < 3:  # tests if attributes have already been created by a previous call or import
         for element in jsondatabase[skilldoc]:
             attributes[0].append(element["full_name"])
             attributes[1].append(element["name"])
@@ -37,27 +37,25 @@ def main():
     for element in monsters:
         print(str(count) + ': ' + element)
         count += 1
-    chosenlist = validintinput(0, len(monsters)-1)
+    chosenlist = validintinput(0, len(monsters) - 1)  # validintinput gets an input between min and max (inclusive)
     print('Type "back" to choose a different monster list')
-    monsterList = monsters[int(chosenlist)]
+    monsterList = monsters[int(chosenlist)]  # defines which list we will use first
     while True:
-        print('Options:',['stats','encounter','addplayer','addmonster'])
-        stype = input().lower()
+        print('Options:', ['stats', 'encounter', 'addplayer', 'addmonster'])  # list of options
+        stype = input().lower()  #
         if stype == "back":
             break
-        else:
-            inputneeded = True
-        if stype == "stats" or stype == "stat":
+        if stype == "stats" or stype == "stat":  # puts monster stats onto card
             monstAttribs, block = stats("", monsterList, True)
             if monstAttribs is not None:
                 for i in range(0, len(monstAttribs[1])):
                     print(str(attributes[1][i]) + '  ' + '{0:+}'.format(int(monstAttribs[2][i])) + '\t\t' + str(
                         monstAttribs[1][i]))
-        if stype == "encounter":
+        if stype == "encounter":  # starts encounter
             runencounter()
-        if stype == "addplayer":
+        if stype == "addplayer":  # adding a custom player
             addplayer()
-        if stype == "addmonster":
+        if stype == "addmonster":  # adding a custom monster
             addmonster()
     main()
 
@@ -68,6 +66,89 @@ def addplayer():
     queries = ["name", "size", "alignment", "armor_class", "hit_points", "hit_dice", "speed{", "walk", "swim", "fly",
                "climb", "}", "strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma", "skills",
                "senses", "languages", "level", "class(es)"]
+    indent = 0  # this is a rather hard to understand way of doing indentation, anything better?
+    indentedel = 0
+    for element in queries:
+        print(element)  # prints what type of data we are looking for
+        if indent == 0:
+            if '{' not in element:  # checks if this data should be indented or not
+                stat = input()
+                if isInteger(stat):  # integers should not be stored as strings in the json files
+                    newplayer[element] = int(stat)
+                elif isinstance(stat, str) and stat.count(',') > 0:
+                    stat = stat.split(',')
+                    replacement = []
+                    for fix in stat:
+                        replacement.append(fix.strip().title())
+                    stat = replacement
+                    newplayer[element] = stat
+                else:
+                    newplayer[element] = stat
+            else:  # the data should be indented
+                newplayer[element.split("{")[0]] = {}  # creates dict to allow indented data
+                indent += 1  # tells us in the future to indent our elements
+                indentedel = newplayer[element[0:-1]]  # element[0:-1] is probably the same as element.split("{")[0]
+        else:
+            if '}' not in element:
+                stat = input()
+                if stat.isnumeric() and float(stat) % 1 < .0001:
+                    indentedel[element] = int(stat)
+                if isinstance(stat, str) and stat.count(',') > 0:
+                    stat = stat.split(',')
+                    replacement = []
+                    for fix in stat:
+                        replacement.append(fix.strip().title())
+                    stat = element
+                    indentedel[element] = stat
+                else:
+                    indentedel[element] = stat
+            else:  # means we should escape the indentation
+                indentedel = 0  # tells us future elements aren't indented
+                indent -= 1  # framework for double indentation, won't work because of above line
+    print('How many actions to add?')  # actions are things like attacks, spells, etc.
+    actions = validintinput(0, 200)  # if they have more than 200 actions to keep track of it's not my problem
+    if actions > 0:
+        newplayer["actions"] = []
+    validkeys = {'attack_bonus': 0, 'desc': 0, 'name': 0}  # these lines could be one, but I think it's more clear as is
+    validkeys['damage'] = ['damage_bonus', 'damage_dice', 'damage_type']
+    validkeys['dc'] = ['dc_type', 'dc_value', 'success_type']
+    for i in range(0, actions):
+        newplayer['actions'].append({})
+        while True:
+            print('Continue giving one of the following keys until satisfied. Enter empty line to go to next action.')
+            print(validkeys.keys())  # tells user their options
+            level1 = input()
+            if level1 == '':  # allows escape
+                break
+            if validkeys.get(level1) is not None and validkeys[level1] != 0:  # indented?
+                print('Second level key: ', validkeys[level1])  # prints indented options
+                level2 = input()
+                if level2 in validkeys[level1]:
+                    print('Value?')
+                    value = input()
+                    newplayer['actions'][-1].setdefault(level1, {})  # if level one doesn't exist initialize as dict
+                    newplayer['actions'][-1][level1][level2] = value
+            elif validkeys.get(level1) is not None:
+                print('Value?')
+                value = input()
+                newplayer['actions'][-1][level1] = value
+    newplayer["challenge_rating"] = newplayer["level"]  # level is stored as challenge_rating for consistency
+    with open(path + 'players.json', "r") as f:  # we dont want to remove all our old players
+        playerscurr = json.load(f)
+        playerscurr.append(newplayer)
+    json.dumps(playerscurr)
+    with open(path + 'players.json', "w") as f:  # add our new player to the file printed nicely incase we want to edit
+        json.dump(playerscurr, f, sort_keys=True, indent=4, separators=(',', ': '))
+    print("If you are in player list, back out and return before attempting to print cards or run encounters")
+    generate_name_dict()  # spellcheck purposes
+
+
+def addmonster():
+    newplayer = {}  # honestly addplayer() should be the same documentation, check there
+    print("Please provide the following values (if multiple ex proficiencies/languages, separate with commas)")
+    queries = ["name", "size", "alignment", "armor_class", "hit_points", "hit_dice", "speed{", "walk", "swim", "fly",
+               "climb", "}", "strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma", "skills",
+               "senses", "languages", "challenge_rating", "description"]
     indent = 0
     indentedel = 0
     for element in queries:
@@ -75,8 +156,11 @@ def addplayer():
         if indent == 0:
             if '{' not in element:
                 stat = input()
-                if stat.isnumeric() and float(stat) % 1 < .0001:
-                    newplayer[element] = int(stat)
+                if stat.isnumeric() or isFloat(stat):
+                    if float(stat) % 1 < .0001:
+                        newplayer[element] = int(stat)
+                    else:
+                        newplayer[element] = float(stat)
                 elif isinstance(stat, str) and stat.count(',') > 0:
                     stat = stat.split(',')
                     replacement = []
@@ -134,92 +218,6 @@ def addplayer():
                 print('Value?')
                 value = input()
                 newplayer['actions'][-1][level1] = value
-    newplayer["challenge_rating"] = newplayer["level"]
-    with open(path + 'players.json', "r") as f:
-        playerscurr = json.load(f)
-        playerscurr.append(newplayer)
-    json.dumps(playerscurr)
-    with open(path + 'players.json', "w") as f:
-        json.dump(playerscurr, f, sort_keys=True, indent=4, separators=(',', ': '))
-    print("If you are in player list, back out and return before attempting to print cards or run encounters")
-    generate_name_dict()
-
-
-def addmonster():
-    newplayer = {}
-    print("Please provide the following values (if multiple ex proficiencies/languages, separate with commas)")
-    queries = ["name", "size", "alignment", "armor_class", "hit_points", "hit_dice", "speed{", "walk", "swim", "fly",
-               "climb", "}", "strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma", "skills",
-               "senses", "languages", "challenge_rating", "description"]
-    indent = 0
-    indentedel = 0
-    for element in queries:
-        print(element)
-        if indent == 0:
-            if '{' not in element:
-                stat = input()
-                if stat.isnumeric() or isFloat(stat):
-                    if float(stat) % 1 < .0001:
-                        newplayer[element] = int(stat)
-                    else:
-                        newplayer[element] = float(stat)
-                elif isinstance(stat, str) and stat.count(',') > 0:
-                    stat = stat.split(',')
-                    replacement = []
-                    for fix in stat:
-                        replacement.append(fix.strip().title())
-                    stat = replacement
-                    newplayer[element] = stat
-                else:
-                    newplayer[element] = stat
-            else:
-                newplayer[element.split("{")[0]] = {}
-                indent += 1
-                indentedel = newplayer[element[0:-1]]
-        else:
-            if '}' not in element:
-                stat = input()
-                if stat.isnumeric() and float(stat) % 1 < .0001:
-                    indentedel[element] = int(stat)
-                if isinstance(stat, str) and stat.count(',') > 0:
-                    stat = stat.split(',')
-                    replacement = []
-                    for fix in stat:
-                        replacement.append(fix.strip().title())
-                    stat = element
-                    indentedel[element] = stat
-                else:
-                    indentedel[element] = stat
-            else:
-                indentedel = 0
-                indent -= 1
-    print('How many actions to add?')
-    actions = validintinput(0,200)
-    if actions > 0:
-        newplayer["actions"] = []
-    validkeys = {'attack_bonus' : 0, 'desc' : 0, 'name' : 0}
-    validkeys['damage'] = ['damage_bonus', 'damage_dice', 'damage_type']
-    validkeys['dc'] = ['dc_type', 'dc_value', 'success_type']
-    for i in range(0, actions):
-        newplayer['actions'].append({})
-        while True:
-            print('Continue giving one of the following keys until satisfied. Enter empty line to go to next action.')
-            print(validkeys.keys())
-            level1 = input()
-            if level1 == '':
-                break
-            if validkeys.get(level1) is not None and validkeys[level1] != 0:
-                print('Second level key: ', validkeys[level1])
-                level2 = input()
-                if level2 in validkeys[level1]:
-                    print('Value?')
-                    value = input()
-                    newplayer['actions'][-1].setdefault(level1,{})
-                    newplayer['actions'][-1][level1][level2] = value
-            elif validkeys.get(level1) is not None:
-                print('Value?')
-                value = input()
-                newplayer['actions'][-1][level1] = value
     with open(path + 'custom_monsters.json', "r") as f:
         playerscurr = json.load(f)
         playerscurr.append(newplayer)
@@ -238,11 +236,11 @@ def runencounter():
     if doload in "new":
         print('Encounter name?')
         encname = input()
-        if os.path.exists("./encounters/" + str(encname) + '.json'):
+        if os.path.exists("./encounters/" + str(encname) + '.json'):  # we don't like overwriting files
             print("ERROR: FILE EXISTS")
             return None
-        with open("./encounters/" + str(encname) + '.json', "w+") as f:
-            while True:
+        with open("./encounters/" + str(encname) + '.json', "w+") as f:  # now we know we can write to it
+            while True:  # I might move file open to later in case there are errors in this part to avoid empty files
                 print("Enter combatant species (empty line signals completion, will be spellchecked)")
                 combatant_species = input()
                 if combatant_species == '':
@@ -252,7 +250,7 @@ def runencounter():
                 for element in monsters:
                     print(str(count) + " : " + element)
                     count += 1
-                choice = validintinput(0, len(monsters)-1)
+                choice = validintinput(0, len(monsters) - 1)
                 combatant_species = spellcheck(combatant_species, path, monsters[choice])
                 if combatant_species is not None:
                     monstAttribs, block = stats(combatant_species, monsters[choice], False)
@@ -277,7 +275,7 @@ def runencounter():
             print("INITIATIVE TIME!")
             for element in encounter["combatants"]:
                 print(element["name"] + '   ' + element["species"])
-                element["initiative"] = validintinput(-2000,2000)
+                element["initiative"] = validintinput(-2000, 2000)
             encounter["initiative list"] = [[], []]
             comba = encounter["combatants"]
             max = -500
@@ -323,7 +321,7 @@ def runencounter():
                 for element in encounter["combatants"]:
                     print(str(count) + ' : ' + element['name'])
                     count += 1
-                creature = encounter["combatants"][validintinput(0,count-1)]
+                creature = encounter["combatants"][validintinput(0, count - 1)]
             turn = {'turn_id': turnid}
             finalturn = False
             if option == '':
@@ -345,7 +343,7 @@ def runencounter():
                 print('AC : ' + str(creature["fullblock"]["armor_class"]))
                 print('Current HP : ' + str(creature['hit_points']))
                 print('Enter HP change')
-                hpchange = validintinput(-pow(2,16)+1,pow(2,16)-1)
+                hpchange = validintinput(-pow(2, 16) + 1, pow(2, 16) - 1)
                 turn['hp changed'] = {'creature': creature['name'], 'old_hp': creature['hit_points']}
                 if option in 'changehp':
                     creature['hit_points'] += int(hpchange)
@@ -451,12 +449,20 @@ def isFloat(isit):
         return False
 
 
-def validintinput(min,max):
+def isInteger(isit):
+    if isFloat(isit) and float(isit) % 1 < .00005:
+        return True
+    else:
+        return False
+
+
+def validintinput(min, max):
     print('Give valid integer between ' + str(min) + ' and ' + str(max))
     inp = input()
     while not (isFloat(inp) and (max >= int(float(inp)) >= min)):
         print('Give valid integer between ' + str(min) + ' and ' + str(max))
         inp = input()
     return int(float(inp))
+
 
 main()
