@@ -3,13 +3,14 @@ from PIL import ImageFont, Image, ImageDraw
 import pprint
 import os
 import json
-from Spellcheck import spellcheck
+from Spellcheck import spellcheck, quickcheck, reloadnames
 from generate_name_dict import generate_name_dict
 
 # in the future, is there a better way to accomplish this? maybe a json file that labels what is what?
 monsters = ["5e-SRD-Monsters.json", "Great-DND5e-Monster-Spreadsheet.json",
             "Great-DND5e-Monster-Spreadsheet-Homebrew.json", "players.json", "custom_monsters.json"]
 skilldoc = "5e-SRD-Ability-Scores.json"
+spelldoc = "5e-SRD-Spells.json"
 cardfile = "./images/cardlayout.json"
 path = '../open5e/'
 
@@ -41,12 +42,16 @@ def main():
     print('Type "back" to choose a different monster list')
     monsterList = monsters[int(chosenlist)]  # defines which list we will use first
     while True:
-        print('Options:', ['stats', 'encounter', 'addplayer', 'addmonster'])  # list of options
+        print('Options:', ['stats', 'encounter', 'addplayer', 'addmonster', 'spell', 'customrequest'])  # list of options
         stype = input().lower()  #
         if stype == "back":
             break
         if stype == "stats" or stype == "stat":  # puts monster stats onto card
-            monstAttribs, block = stats("", monsterList, True)
+            monststats = stats("", monsterList, True)
+            if monststats is not None:
+                monstAttribs, block = monststats
+            else:
+                monstAttribs, block = (None, None)
             if monstAttribs is not None:
                 for i in range(0, len(monstAttribs[1])):
                     print(str(attributes[1][i]) + '  ' + '{0:+}'.format(int(monstAttribs[2][i])) + '\t\t' + str(
@@ -57,13 +62,18 @@ def main():
             addplayer()
         if stype == "addmonster":  # adding a custom monster
             addmonster()
-    main()
+        if stype == "spell":
+            spell = findspell()
+            pprint.pprint(spell, indent=2, sort_dicts=True)
+        if stype == 'customrequest':
+            block = customrequest()
+            pprint.pprint(block, indent = 4, sort_dicts = True)
 
 
 def addplayer():
     newplayer = {}
     print("Please provide the following values (if multiple ex proficiencies/languages, separate with commas)")
-    queries = ["name", "size", "alignment", "armor_class", "hit_points", "hit_dice", "speed{", "walk", "swim", "fly",
+    queries = ["name", "race", "size", "alignment", "armor_class", "hit_points", "hit_dice", "speed{", "walk", "swim", "fly",
                "climb", "}", "strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma", "skills",
                "senses", "languages", "level", "class(es)"]
     indent = 0  # this is a rather hard to understand way of doing indentation, anything better?
@@ -133,20 +143,24 @@ def addplayer():
                 value = input()
                 newplayer['actions'][-1][level1] = value
     newplayer["challenge_rating"] = newplayer["level"]  # level is stored as challenge_rating for consistency
+    if not os.path.exists(path + 'players.json'):
+        with open(path + 'players.json', "w+") as f:
+            json.dump([{}], f)
     with open(path + 'players.json', "r") as f:  # we dont want to remove all our old players
         playerscurr = json.load(f)
         playerscurr.append(newplayer)
     json.dumps(playerscurr)
-    with open(path + 'players.json', "w") as f:  # add our new player to the file printed nicely incase we want to edit
+    with open(path + 'players.json', "w+") as f:  # add our new player to the file printed nicely incase we want to edit
         json.dump(playerscurr, f, sort_keys=True, indent=4, separators=(',', ': '))
     print("If you are in player list, back out and return before attempting to print cards or run encounters")
     generate_name_dict()  # spellcheck purposes
+    reloadnames()
 
 
 def addmonster():
     newplayer = {}  # honestly addplayer() should be the same documentation, check there
     print("Please provide the following values (if multiple ex proficiencies/languages, separate with commas)")
-    queries = ["name", "size", "alignment", "armor_class", "hit_points", "hit_dice", "speed{", "walk", "swim", "fly",
+    queries = ["name", "race", "size", "alignment", "armor_class", "hit_points", "hit_dice", "speed{", "walk", "swim", "fly",
                "climb", "}", "strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma", "skills",
                "senses", "languages", "challenge_rating", "description"]
     indent = 0
@@ -218,14 +232,18 @@ def addmonster():
                 print('Value?')
                 value = input()
                 newplayer['actions'][-1][level1] = value
+    if not os.path.exists(path + 'custom_monsters.json'):
+        with open(path + 'custom_monsters.json', "w+") as f:
+            json.dump([{}], f)
     with open(path + 'custom_monsters.json', "r") as f:
         playerscurr = json.load(f)
         playerscurr.append(newplayer)
     json.dumps(playerscurr)
-    with open(path + 'custom_monsters.json', "w") as f:
+    with open(path + 'custom_monsters.json', "w+") as f:
         json.dump(playerscurr, f, sort_keys=True, indent=4, separators=(',', ': '))
     print("If you are in custom monster list, back out and return before attempting to print cards or run encounters")
     generate_name_dict()
+    reloadnames()
 
 
 def runencounter():
@@ -314,15 +332,8 @@ def runencounter():
         print("TURN TO " + str(encounter['initiative list'][1][encounter['initiativecount']]))
         turnid = encounter['rounds'][-1].setdefault('turn_id', 0)
         while True:
-            print('Options: stats, changehp (gives ac), sethp, actions, addnote, nextturn, save')
+            print('Options: stats, changehp (gives ac), sethp, actions, addnote, nextturn, save, spell, customrequest')
             option = input()
-            count = 0
-            if option in ['stats', 'changehp', 'sethp', 'addnote', 'actions']:
-                for element in encounter["combatants"]:
-                    print(str(count) + ' : ' + element['name'])
-                    count += 1
-                creature = encounter["combatants"][validintinput(0, count - 1)]
-            turn = {'turn_id': turnid}
             finalturn = False
             if option == '':
                 print('Would you like to save first?? [Y/N]')
@@ -332,29 +343,38 @@ def runencounter():
                     finalturn = True
                 elif option in 'N':
                     break
-            if option in 'stats':
+            count = 0
+            needcreature = ['stats', 'changehp', 'sethp', 'addnote', 'actions']
+            if option in needcreature:
+                for element in encounter["combatants"]:
+                    print(str(count) + ' : ' + element['name'])
+                    count += 1
+                creature = encounter["combatants"][validintinput(0, count - 1)]
+            turn = {'turn_id': turnid}
+            if option == 'stats' or option == 'stat':
                 for i in range(0, len(creature['stats'][1])):
                     print(str(attributes[1][i]) + '  ' + '{0:+}'.format(int(creature['stats'][2][i])) + '\t\t' + str(
                         creature['stats'][1][i]))
                 print('AC : ' + str(creature["fullblock"]["armor_class"]))
                 print('Current HP : ' + str(creature['hit_points']))
                 turn['stat lookup'] = {'creature': creature['name']}
-            elif option in 'changehp' or option in 'sethp':
+            elif option  == 'changehp' or option == 'sethp':
                 print('AC : ' + str(creature["fullblock"]["armor_class"]))
                 print('Current HP : ' + str(creature['hit_points']))
                 print('Enter HP change')
                 hpchange = validintinput(-pow(2, 16) + 1, pow(2, 16) - 1)
                 turn['hp changed'] = {'creature': creature['name'], 'old_hp': creature['hit_points']}
-                if option in 'changehp':
+                if option == 'changehp':
                     creature['hit_points'] += int(hpchange)
-                elif option in 'sethp':
+                elif option == 'sethp':
                     creature['hit_points'] = int(hpchange)
                 turn['hp changed']['new_hp'] = creature['hit_points']
-            elif option in 'addnote':
+                print(turn['hp changed'])
+            elif option == 'addnote':
                 note = input()
                 creature['notes'].append(note)
                 turn['notes'] = note
-            elif option in 'nextturn':
+            elif option == 'nextturn':
                 turnid += 1
                 encounter['initiativecount'] += 1
                 if encounter['initiativecount'] >= len(encounter['initiative list'][0]):
@@ -364,20 +384,53 @@ def runencounter():
                     if encounter['initiative list'][1][encounter['initiativecount']] == element['name']:
                         print(element['notes'])
                         break
-            elif option in 'save':
+            elif option == 'spell':
+                spell = findspell()
+                pprint.pprint(spell, indent=2, sort_dicts=True)
+            elif option == 'save':
                 with open("./encounters/" + str(encname) + '.json', "w+") as f:
                     json.dump(encounter, f, sort_keys=True, indent=4, separators=(',', ': '))
                 sincesave = 0
                 print('Save successful.')
                 if finalturn:
                     break
-            elif option in 'actions':
+            elif option == 'actions':
                 if creature['fullblock'].get('actions') is not None:
                     pprint.pprint(creature['fullblock'].get('actions'), indent=4)
+            elif option == 'customrequest':
+                block = customrequest()
+                pprint.pprint(block, indent = 4, sort_dicts = True)
             encounter['rounds'].append(turn)
             turnid += 1
             if sincesave > 9:
                 print("PLEASE SAVE: HAVE NOT SAVED IN " + str(sincesave))
+
+
+def customrequest():
+    count = 0
+    files = list(jsondatabase.keys())
+    for i in range(0, len(files)):
+        print(str(count) + " : " + str(files[count]))
+        count += 1
+    choice = validintinput(0, len(files) - 1)
+    try:
+        jsondatabase[str(files[choice])][0]['name']
+    except KeyError:
+        print('BAD, that has no names')
+        return None
+    print('What are you looking for?')
+    request = input()
+    sendfile = str(files[choice])
+    possiblerequest = quickcheck(request, path, sendfile)
+    if possiblerequest is not None:
+        possiblerequest = possiblerequest.lower()
+    else:
+        spell = spellcheck(request, path, sendfile)
+        possiblerequest = quickcheck(spell, path, sendfile)
+        possiblerequest = possiblerequest.lower()
+    for element in jsondatabase[sendfile]:
+        if element['name'].lower() == possiblerequest:
+            return element
 
 
 def stats(query, monsterList, inputneeded):
@@ -412,6 +465,22 @@ def stats(query, monsterList, inputneeded):
         if intended is not None:
             query = intended
             return stats(query, monsterList, False)
+
+
+def findspell():
+    print("Spell name?")
+    spell = input()
+    possiblespell = quickcheck(spell, path, spelldoc)
+    if possiblespell is not None:
+        possiblespell = possiblespell.lower()
+    else:
+        spell = spellcheck(spell, path, spelldoc)
+        possiblespell = quickcheck(spell, path, spelldoc)
+        possiblespell = possiblespell.lower()
+    for element in jsondatabase[spelldoc]:
+        if element['name'].lower() == possiblespell:
+            return element
+
 
 
 def carddraw(image, cardlayout, monsterdata):
@@ -465,4 +534,5 @@ def validintinput(min, max):
     return int(float(inp))
 
 
-main()
+while True:
+    main()

@@ -3,14 +3,16 @@ import json
 from generate_name_dict import generate_name_dict as namegen
 
 
+namepath = "./namelist.json"
+if not os.path.exists(namepath):
+    namegen()
+with open(namepath, 'r') as f:
+    filedict = json.load(f)
+
+
 def spellcheck(mystery_word, path, expected_loc):
     locdict = [[]]
     possibilities = []
-    namepath = "./namelist.json"
-    if not os.path.exists(namepath):
-        namegen()
-    with open(namepath, 'r') as f:
-        filedict = json.load(f)
     for element in filedict[expected_loc]:
         locdict.append(element.split())
     locdict.remove([])
@@ -37,3 +39,16 @@ def spellcheck(mystery_word, path, expected_loc):
         return ' '.join(possibilities[abs(int(choice))])
     else:
         return None
+
+
+def quickcheck(word, path, expected_loc):
+    word = word.lower()
+    for element in filedict[expected_loc]:
+        if element.lower() == word:
+            return element
+    return None
+
+def reloadnames():
+    global filedict
+    with open(namepath, 'r') as f:
+        filedict = json.load(f)
