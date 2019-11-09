@@ -42,7 +42,7 @@ def main():
     print('Type "back" to choose a different monster list')
     monsterList = monsters[int(chosenlist)]  # defines which list we will use first
     while True:
-        print('Options:', ['stats', 'encounter', 'addplayer', 'addmonster', 'spell', 'customrequest'])  # list of options
+        print('Options:', ['back', 'stats', 'encounter', 'addplayer', 'addmonster', 'spell', 'customrequest'])  # list of options
         stype = input().lower()  #
         if stype == "back":
             break
@@ -59,32 +59,38 @@ def main():
         if stype == "encounter":  # starts encounter
             runencounter()
         if stype == "addplayer":  # adding a custom player
-            addplayer()
+            addmonster('players.json')
         if stype == "addmonster":  # adding a custom monster
-            addmonster()
+            addmonster('custom_monsters.json')
         if stype == "spell":
-            spell = findspell()
+            spell = customrequest(file = spelldoc)
             pprint.pprint(spell, indent=2, sort_dicts=True)
         if stype == 'customrequest':
             block = customrequest()
-            pprint.pprint(block, indent = 4, sort_dicts = True)
+            pprint.pprint(block, indent=4, sort_dicts=True)
+        if stype == 'maintenance':
+            print('Surprised you spelled it right')
+            generate_name_dict()
+            reloadnames()
 
 
-def addplayer():
+def addmonster(file):
     newplayer = {}
     print("Please provide the following values (if multiple ex proficiencies/languages, separate with commas)")
     queries = ["name", "race", "size", "alignment", "armor_class", "hit_points", "hit_dice", "speed{", "walk", "swim", "fly",
                "climb", "}", "strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma", "skills",
-               "senses", "languages", "level", "class(es)"]
+               "senses", "languages", "challenge_rating/level", "description", 'class']
     indent = 0  # this is a rather hard to understand way of doing indentation, anything better?
     indentedel = 0
     for element in queries:
         print(element)  # prints what type of data we are looking for
         if indent == 0:
-            if '{' not in element:  # checks if this data should be indented or not
+            if '{' not in element:  # checks if this data shouldn't be indented
                 stat = input()
-                if isInteger(stat):  # integers should not be stored as strings in the json files
+                if isInteger(stat):  # integers should not be stored as strings in the json file
                     newplayer[element] = int(stat)
+                elif isFloat(stat):
+                    newplayer[element] = float(stat)
                 elif isinstance(stat, str) and stat.count(',') > 0:
                     stat = stat.split(',')
                     replacement = []
@@ -94,12 +100,12 @@ def addplayer():
                     newplayer[element] = stat
                 else:
                     newplayer[element] = stat
-            else:  # the data should be indented
-                newplayer[element.split("{")[0]] = {}  # creates dict to allow indented data
-                indent += 1  # tells us in the future to indent our elements
+            else:  #data should be indented
+                newplayer[element.split("{")[0]] = {}  # dict to allow indented data
+                indent += 1  # tells us to indent on next iteration
                 indentedel = newplayer[element[0:-1]]  # element[0:-1] is probably the same as element.split("{")[0]
         else:
-            if '}' not in element:
+            if '}' not in element:  # remain indented
                 stat = input()
                 if stat.isnumeric() and float(stat) % 1 < .0001:
                     indentedel[element] = int(stat)
@@ -112,138 +118,51 @@ def addplayer():
                     indentedel[element] = stat
                 else:
                     indentedel[element] = stat
-            else:  # means we should escape the indentation
-                indentedel = 0  # tells us future elements aren't indented
-                indent -= 1  # framework for double indentation, won't work because of above line
-    print('How many actions to add?')  # actions are things like attacks, spells, etc.
-    actions = validintinput(0, 200)  # if they have more than 200 actions to keep track of it's not my problem
-    if actions > 0:
-        newplayer["actions"] = []
-    validkeys = {'attack_bonus': 0, 'desc': 0, 'name': 0}  # these lines could be one, but I think it's more clear as is
-    validkeys['damage'] = ['damage_bonus', 'damage_dice', 'damage_type']
-    validkeys['dc'] = ['dc_type', 'dc_value', 'success_type']
-    for i in range(0, actions):
-        newplayer['actions'].append({})
-        while True:
-            print('Continue giving one of the following keys until satisfied. Enter empty line to go to next action.')
-            print(validkeys.keys())  # tells user their options
-            level1 = input()
-            if level1 == '':  # allows escape
-                break
-            if validkeys.get(level1) is not None and validkeys[level1] != 0:  # indented?
-                print('Second level key: ', validkeys[level1])  # prints indented options
-                level2 = input()
-                if level2 in validkeys[level1]:
-                    print('Value?')
-                    value = input()
-                    newplayer['actions'][-1].setdefault(level1, {})  # if level one doesn't exist initialize as dict
-                    newplayer['actions'][-1][level1][level2] = value
-            elif validkeys.get(level1) is not None:
-                print('Value?')
-                value = input()
-                newplayer['actions'][-1][level1] = value
-    newplayer["challenge_rating"] = newplayer["level"]  # level is stored as challenge_rating for consistency
-    if not os.path.exists(path + 'players.json'):
-        with open(path + 'players.json', "w+") as f:
-            json.dump([{}], f)
-    with open(path + 'players.json', "r") as f:  # we dont want to remove all our old players
-        playerscurr = json.load(f)
-        playerscurr.append(newplayer)
-    json.dumps(playerscurr)
-    with open(path + 'players.json', "w+") as f:  # add our new player to the file printed nicely incase we want to edit
-        json.dump(playerscurr, f, sort_keys=True, indent=4, separators=(',', ': '))
-    print("If you are in player list, back out and return before attempting to print cards or run encounters")
-    generate_name_dict()  # spellcheck purposes
-    reloadnames()
-
-
-def addmonster():
-    newplayer = {}  # honestly addplayer() should be the same documentation, check there
-    print("Please provide the following values (if multiple ex proficiencies/languages, separate with commas)")
-    queries = ["name", "race", "size", "alignment", "armor_class", "hit_points", "hit_dice", "speed{", "walk", "swim", "fly",
-               "climb", "}", "strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma", "skills",
-               "senses", "languages", "challenge_rating", "description"]
-    indent = 0
-    indentedel = 0
-    for element in queries:
-        print(element)
-        if indent == 0:
-            if '{' not in element:
-                stat = input()
-                if stat.isnumeric() or isFloat(stat):
-                    if float(stat) % 1 < .0001:
-                        newplayer[element] = int(stat)
-                    else:
-                        newplayer[element] = float(stat)
-                elif isinstance(stat, str) and stat.count(',') > 0:
-                    stat = stat.split(',')
-                    replacement = []
-                    for fix in stat:
-                        replacement.append(fix.strip().title())
-                    stat = replacement
-                    newplayer[element] = stat
-                else:
-                    newplayer[element] = stat
-            else:
-                newplayer[element.split("{")[0]] = {}
-                indent += 1
-                indentedel = newplayer[element[0:-1]]
-        else:
-            if '}' not in element:
-                stat = input()
-                if stat.isnumeric() and float(stat) % 1 < .0001:
-                    indentedel[element] = int(stat)
-                if isinstance(stat, str) and stat.count(',') > 0:
-                    stat = stat.split(',')
-                    replacement = []
-                    for fix in stat:
-                        replacement.append(fix.strip().title())
-                    stat = element
-                    indentedel[element] = stat
-                else:
-                    indentedel[element] = stat
-            else:
-                indentedel = 0
-                indent -= 1
-    print('How many actions to add?')
-    actions = validintinput(0, 200)
+            else:  # escape indentation
+                indentedel = 0  # possibly not necessary?
+                indent -= 1  # sets up for double indented in the future though it probably won't work now
+    newplayer['challenge_rating'] = newplayer["challenge_rating/level"]  # quick fix to meet standard
+    newplayer.pop("challenge_rating/level")  # keeps it clean
+    print('How many actions to add?')  # attacks, spells, etc
+    actions = validintinput(0, 200)  # if they do more than 200 actions their fingers might fall off
     if actions > 0:
         newplayer["actions"] = []
     validkeys = {'attack_bonus': 0, 'desc': 0, 'name': 0}
+    # these three lines could be made one declaration, but i think this adds clarity personally
     validkeys['damage'] = ['damage_bonus', 'damage_dice', 'damage_type']
     validkeys['dc'] = ['dc_type', 'dc_value', 'success_type']
     for i in range(0, actions):
         newplayer['actions'].append({})
         while True:
             print('Continue giving one of the following keys until satisfied. Enter empty line to go to next action.')
-            print(validkeys.keys())
+            print(validkeys.keys())  # gives user valid options
             level1 = input()
-            if level1 == '':
+            if level1 == '':  #escape mechanism
                 break
-            if validkeys.get(level1) is not None and validkeys[level1] != 0:
-                print('Second level key: ', validkeys[level1])
+            if validkeys.get(level1) is not None and validkeys[level1] != 0:  # indented
+                print('Second level key: ', validkeys[level1])  # gives indented options (currently no double indent support)
                 level2 = input()
                 if level2 in validkeys[level1]:
                     print('Value?')
                     value = input()
-                    newplayer['actions'][-1].setdefault(level1, {})
+                    newplayer['actions'][-1].setdefault(level1, {})  # needs to happen once per indent
                     newplayer['actions'][-1][level1][level2] = value
             elif validkeys.get(level1) is not None:
                 print('Value?')
                 value = input()
                 newplayer['actions'][-1][level1] = value
-    if not os.path.exists(path + 'custom_monsters.json'):
-        with open(path + 'custom_monsters.json', "w+") as f:
-            json.dump([{}], f)
-    with open(path + 'custom_monsters.json', "r") as f:
-        playerscurr = json.load(f)
-        playerscurr.append(newplayer)
+    playerscurr = []
+    if os.path.exists(path + file):
+        with open(path + file, "r") as f:  # i would like to keep my old customs too
+            playerscurr = json.load(f)
+    playerscurr.append(newplayer)
     json.dumps(playerscurr)
-    with open(path + 'custom_monsters.json', "w+") as f:
+    with open(path + file, "w+") as f:
+        # printed nicely incase i want to edit later manually
         json.dump(playerscurr, f, sort_keys=True, indent=4, separators=(',', ': '))
     print("If you are in custom monster list, back out and return before attempting to print cards or run encounters")
-    generate_name_dict()
-    reloadnames()
+    generate_name_dict()  # spellcheck purposes
+    reloadnames()  # allows spellcheck to work? maybe? it stays for now
 
 
 def runencounter():
@@ -385,7 +304,9 @@ def runencounter():
                         print(element['notes'])
                         break
             elif option == 'spell':
-                spell = findspell()
+                spell = customrequest(file=spelldoc)
+                spell = {} if spell is None else spell
+                turn['notes'] = 'Gave spell info for: ' + str(spell.get('name'))
                 pprint.pprint(spell, indent=2, sort_dicts=True)
             elif option == 'save':
                 with open("./encounters/" + str(encname) + '.json', "w+") as f:
@@ -406,13 +327,17 @@ def runencounter():
                 print("PLEASE SAVE: HAVE NOT SAVED IN " + str(sincesave))
 
 
-def customrequest():
+def customrequest(**kwargs):
+    file = kwargs.get('file', None)
     count = 0
     files = list(jsondatabase.keys())
-    for i in range(0, len(files)):
-        print(str(count) + " : " + str(files[count]))
-        count += 1
-    choice = validintinput(0, len(files) - 1)
+    if file is None:
+        for i in range(0, len(files)):
+            print(str(count) + " : " + str(files[count]))
+            count += 1
+        choice = validintinput(0, len(files) - 1)
+    else:
+        choice = int(files.index(file))
     try:
         jsondatabase[str(files[choice])][0]['name']
     except KeyError:
@@ -426,12 +351,13 @@ def customrequest():
         possiblerequest = possiblerequest.lower()
     else:
         spell = spellcheck(request, path, sendfile)
-        possiblerequest = quickcheck(spell, path, sendfile)
-        possiblerequest = possiblerequest.lower()
+        if spell is not None:
+            possiblerequest = quickcheck(spell, path, sendfile)
+            possiblerequest = possiblerequest.lower()
     for element in jsondatabase[sendfile]:
         if element['name'].lower() == possiblerequest:
             return element
-
+    return None
 
 def stats(query, monsterList, inputneeded):
     found = False
@@ -445,42 +371,27 @@ def stats(query, monsterList, inputneeded):
         monstAttribs[0].append("back")
         return monstAttribs
     for element in jsondatabase[monsterList]:
-        if element["name"].lower() == query:
-            # pprint.pprint(element, indent=2)
-            print('Done. Your ' + element['name'] + ' card is ready, here are the raw stats anyway.')
-            card = Image.open('./images/basecard.png')
-            cardplt = ImageDraw.Draw(card)
-            carddraw(cardplt, cardlayout, element)
-            card.save('./images/updated.png')
-            found = True
+        if 'name' in element:
+            if element["name"].lower() == query:
+                # pprint.pprint(element, indent=2)
+                print('Done. Your ' + element['name'] + ' card is ready, here are the raw stats anyway.')
+                card = Image.open('./images/basecard.png')
+                cardplt = ImageDraw.Draw(card)
+                carddraw(cardplt, cardlayout, element)
+                card.save('./images/updated.png')
+                found = True
 
-            for attrib in attributes[0]:
-                monstAttribs[0].append(attrib)
-                monstAttribs[1].append(element[attrib.lower()])
-                monstAttribs[2].append((element[attrib.lower()] - element[attrib.lower()] % 2 - 10) / 2)
-            return monstAttribs, element
+                for attrib in attributes[0]:
+                    monstAttribs[0].append(attrib)
+                    monstAttribs[1].append(element[attrib.lower()])
+                    monstAttribs[2].append((element[attrib.lower()] - element[attrib.lower()] % 2 - 10) / 2)
+                return monstAttribs, element
     if not found:
         print("Didn't see it, did you mean...")
         intended = spellcheck(query, path, monsterList)
         if intended is not None:
             query = intended
             return stats(query, monsterList, False)
-
-
-def findspell():
-    print("Spell name?")
-    spell = input()
-    possiblespell = quickcheck(spell, path, spelldoc)
-    if possiblespell is not None:
-        possiblespell = possiblespell.lower()
-    else:
-        spell = spellcheck(spell, path, spelldoc)
-        possiblespell = quickcheck(spell, path, spelldoc)
-        possiblespell = possiblespell.lower()
-    for element in jsondatabase[spelldoc]:
-        if element['name'].lower() == possiblespell:
-            return element
-
 
 
 def carddraw(image, cardlayout, monsterdata):

@@ -13,11 +13,9 @@ def generate_name_dict():
     elementas = list(jsondatabase.keys())
     names = {}
     for element in elementas:
-        index = 0
         names[element] = []
-        if "name" in jsondatabase[element][0]:
-            for elementint in jsondatabase[element]:
+        for elementint in jsondatabase[element]:
+            if "name" in elementint:
                 names[element].append(elementint["name"])
-                index += 1
     with open("./namelist.json", "w+") as namefile:
         json.dump(names, namefile, sort_keys=True, indent=4, separators=(',', ': '))
