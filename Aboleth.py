@@ -212,6 +212,8 @@ def runencounter():
             print("INITIATIVE TIME!")
             for element in encounter["combatants"]:
                 print(element["name"] + '   ' + element["species"])
+                if 'dexterity' in block:
+                    print('DEX ' + str(block['dexterity']))
                 element["initiative"] = validintinput(-2000, 2000)
             encounter["initiative list"] = [[], []]
             comba = encounter["combatants"]
@@ -240,7 +242,7 @@ def runencounter():
             options.clear()
             print('Encounter name?')
             encname = input()
-        if not os.path.exists("./encounters/" + str(encname) + '.json'):
+        if not os.path.exists("./encounters/" + str(encname).split('.json')[0] + '.json'):
             print("ERROR: MISSING FILE")
             return None
         with open("./encounters/" + str(encname).split('.json')[0] + '.json', 'r') as f:
@@ -251,7 +253,8 @@ def runencounter():
         print("TURN TO " + str(encounter['initiative list'][1][encounter['initiativecount']]))
         turnid = encounter['rounds'][-1].setdefault('turn_id', 0)
         while True:
-            print('Options: stats, changehp (gives ac), sethp, actions, addnote, nextturn, save, spell, customrequest')
+            print('Options: stats, changehp (gives ac), sethp, actions, addnote, nextturn, save, spell, addmon, '
+                  'remmon, customrequest')
             option = input()
             finalturn = False
             if option == '':
@@ -263,7 +266,7 @@ def runencounter():
                 elif option in 'N':
                     break
             count = 0
-            needcreature = ['stats', 'changehp', 'sethp', 'addnote', 'actions']
+            needcreature = ['stats', 'changehp', 'sethp', 'addnote', 'actions', 'remmon']
             if option in needcreature:
                 for element in encounter["combatants"]:
                     print(str(count) + ' : ' + element['name'])
@@ -321,6 +324,61 @@ def runencounter():
             elif option == 'customrequest':
                 block = customrequest()
                 pprint.pprint(block, indent = 4, sort_dicts = True)
+            elif option == 'addmon':
+                print("Enter combatant species (empty line signals completion, will be spellchecked)")
+                combatant_species = input()
+                if combatant_species == '':
+                    break
+                print("Combatant source?")
+                count = 0
+                for element in monsters:
+                    print(str(count) + " : " + element)
+                    count += 1
+                choice = validintinput(0, len(monsters) - 1)
+                combatant_species = spellcheck(combatant_species, path, monsters[choice])
+                if combatant_species is not None:
+                    monstAttribs, block = stats(combatant_species, monsters[choice], False)
+                    if monstAttribs is not None:
+                        encounter["combatants"].append({})
+                        encounter["combatants"][-1]["species"] = combatant_species
+                        print("Found species. Nickname?")
+                        for i in range(0, len(monstAttribs[1])):
+                            print(str(attributes[1][i]) + '  ' + '{0:+}'.format(int(monstAttribs[2][i])) + '\t\t' + str(
+                                monstAttribs[1][i]))
+                        encounter["combatants"][-1]["name"] = input()
+                        encounter["combatants"][-1]["stats"] = monstAttribs
+                        encounter["combatants"][-1]["fullblock"] = block
+                        print("Hit points to start?")
+                        if 'hit_points' in block:
+                            print('Base hit points of the species are ' + str(block['hit_points']))
+                        encounter["combatants"][-1]["hit_points"] = int(input())
+                        encounter["combatants"][-1]['notes'] = []
+                        element = encounter["combatants"][-1]
+                        print('initiative of ' + element["name"] + '   ' + element["species"])
+                        if 'dexterity' in block:
+                            print('DEX ' + str(block['dexterity']))
+                        element["initiative"] = validintinput(-2000, 2000)
+                        for element1 in encounter['initiative list'][0]:
+                            if element["initiative"] < element1:
+                                index = encounter['initiative list'][0].index(element1)
+                                encounter['initiative list'][0].insert(index - 1, element['initiative'])
+                                encounter['initiative list'][1].insert(index - 1, element['name'])
+                                if index > encounter['initiativecount']:
+                                    encounter['initiativecount'] += 1
+                                break
+            elif option == 'remmon':
+                print('Are you positive (Y/N) you want to remove:  ' + creature['name'] + ' the ' + creature['species'])
+                confirm = input()
+                if confirm == 'Y':
+                    index = encounter['initiative list'][1].index(str(creature['name']))
+                    encounter['initiative list'][0].remove(creature['initiative'])
+                    encounter['initiative list'][1].remove(creature['name'])
+                    if encounter['initiativecount'] > index:
+                        encounter['initiativecount'] -= 1
+                    for element in encounter['combatants']:
+                        if element['name'] == creature['name']:
+                            encounter['combatants'].remove(element)
+                            break
             encounter['rounds'].append(turn)
             turnid += 1
             if sincesave > 9:
