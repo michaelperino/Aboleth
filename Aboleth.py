@@ -3,6 +3,7 @@ from PIL import ImageFont, Image, ImageDraw
 import pprint
 import os
 import json
+import random
 from Spellcheck import spellcheck, quickcheck, reloadnames
 from generate_name_dict import generate_name_dict
 
@@ -25,6 +26,7 @@ else:
 
 
 def main():
+    random.seed()
     for file in os.listdir(path):  # gets list of all the json files
         if file.endswith(".json"):
             with open(path + file, 'r') as f:
@@ -33,6 +35,7 @@ def main():
         for element in jsondatabase[skilldoc]:
             attributes[0].append(element["full_name"])
             attributes[1].append(element["name"])
+    generate_name_dict()
     print('Monster list?')
     count = 0
     for element in monsters:
@@ -42,7 +45,7 @@ def main():
     print('Type "back" to choose a different monster list')
     monsterList = monsters[int(chosenlist)]  # defines which list we will use first
     while True:
-        print('Options:', ['back', 'stats', 'encounter', 'addplayer', 'addmonster', 'spell', 'customrequest'])  # list of options
+        print('Options:', ['back', 'stats', 'encounter', 'addplayer', 'addmonster', 'spell', 'customrequest', 'roll'])  # list of options
         stype = input().lower()  #
         if stype == "back":
             break
@@ -64,14 +67,23 @@ def main():
             addmonster('custom_monsters.json')
         if stype == "spell":
             spell = customrequest(file = spelldoc)
-            pprint.pprint(spell, indent=2, sort_dicts=True)
+            pprint.pprint(spell, indent=2)
         if stype == 'customrequest':
             block = customrequest()
-            pprint.pprint(block, indent=4, sort_dicts=True)
+            pprint.pprint(block, indent=4)
         if stype == 'maintenance':
             print('Surprised you spelled it right')
             generate_name_dict()
             reloadnames()
+        if stype == 'roll':
+            print('Number of dice?')
+            numdice = validintinput(1, 1000)
+            print('Number of sides?')
+            numsides = validintinput(1, 1000)
+            total = 0
+            for i in range(0, numdice):
+                total += random.randint(1, numsides)
+            print(str(total) + ' was the result.')
 
 
 def addmonster(file):
@@ -254,7 +266,7 @@ def runencounter():
         turnid = encounter['rounds'][-1].setdefault('turn_id', 0)
         while True:
             print('Options: stats, changehp (gives ac), sethp, actions, addnote, nextturn, save, spell, addmon, '
-                  'remmon, customrequest')
+                  'remmon, customrequest, roll')
             option = input()
             finalturn = False
             if option == '':
@@ -310,7 +322,7 @@ def runencounter():
                 spell = customrequest(file=spelldoc)
                 spell = {} if spell is None else spell
                 turn['notes'] = 'Gave spell info for: ' + str(spell.get('name'))
-                pprint.pprint(spell, indent=2, sort_dicts=True)
+                pprint.pprint(spell, indent=2)
             elif option == 'save':
                 with open("./encounters/" + str(encname) + '.json', "w+") as f:
                     json.dump(encounter, f, sort_keys=True, indent=4, separators=(',', ': '))
@@ -321,9 +333,18 @@ def runencounter():
             elif option == 'actions':
                 if creature['fullblock'].get('actions') is not None:
                     pprint.pprint(creature['fullblock'].get('actions'), indent=4)
+            elif option == 'roll':
+                print('Number of dice?')
+                numdice = validintinput(1, 1000)
+                print('Number of sides?')
+                numsides = validintinput(1, 1000)
+                total = 0
+                for i in range(0, numdice):
+                    total += random.randint(1, numsides)
+                print(str(total) + ' was the result.')
             elif option == 'customrequest':
                 block = customrequest()
-                pprint.pprint(block, indent = 4, sort_dicts = True)
+                pprint.pprint(block, indent=4)
             elif option == 'addmon':
                 print("Enter combatant species (empty line signals completion, will be spellchecked)")
                 combatant_species = input()
